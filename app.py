@@ -43,13 +43,6 @@ def predict():
                 "label": predicted_class,
                 "probability": round(max_prob * 100, 2)  # Return as a percentage
             })
-        else:
-            # Return label 10 (meaning no fallacy) and probability 0%
-            predictions.append({
-                "sentence": sentence,
-                "label": 10,
-                "probability": 0
-            })
 
     return jsonify(predictions)
 
