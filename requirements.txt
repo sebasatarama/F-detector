@@ -1,4 +1,4 @@
-flask
-transformers
+Flask
 torch
+transformers
 gunicorn

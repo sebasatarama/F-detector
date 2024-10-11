@@ -19,13 +19,15 @@
     "6": "LABEL_6",
     "7": "LABEL_7",
     "8": "LABEL_8",
-    "9": "LABEL_9"
+    "9": "LABEL_9",
+    "10": "LABEL_10"
   },
   "initializer_range": 0.02,
   "intermediate_size": 3072,
   "label2id": {
     "LABEL_0": 0,
     "LABEL_1": 1,
+    "LABEL_10": 10,
     "LABEL_2": 2,
     "LABEL_3": 3,
     "LABEL_4": 4,

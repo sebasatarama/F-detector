@@ -1,18 +1,21 @@
 from flask import Flask, request, jsonify
-from transformers import BertForSequenceClassification, BertTokenizer
+from transformers import BertTokenizer, BertForSequenceClassification
 import torch
 import torch.nn.functional as F
+import os
+import requests
 
 app = Flask(__name__)
 
-# Load model and tokenizer from "model" directory
+# Define the path to your model directory
 model_path = "./model"
-model = BertForSequenceClassification.from_pretrained(model_path)
+
+# Load model and tokenizer
 tokenizer = BertTokenizer.from_pretrained(model_path)
+model = BertForSequenceClassification.from_pretrained(model_path)
 
 # Set model to evaluation mode
 model.eval()
-
 
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -36,16 +39,12 @@ def predict():
         predicted_class = predicted_class.item()  # Convert tensor to int
         
         # Check if the max probability is greater than 70%
-        if max_prob > 0.7:
+        if max_prob > 0.6 and predicted_class != 10:
             # Return the predicted label and probability
             predictions.append({
                 "sentence": sentence,
                 "label": predicted_class,
-                "probability": round(max_prob * 100, 2)  # Return as a percentage
+                "probability": round(max_prob * 100 * 0.65, 2)  # Return as a percentage
             })
 
     return jsonify(predictions)
-
-
-if __name__ == '__main__':
-    app.run(debug=True)
