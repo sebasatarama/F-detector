@@ -1,4 +1,4 @@
-Flask
-torch
+fastapi
 transformers
-gunicorn
+torch
+uvicorn

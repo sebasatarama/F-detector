@@ -1,50 +1,54 @@
-from flask import Flask, request, jsonify
-from transformers import BertTokenizer, BertForSequenceClassification
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
-import torch.nn.functional as F
-import os
-import requests
 
-app = Flask(__name__)
+# Define el modelo y el tokenizer
+model_name = "sebasatarama/F-DetectorModel"  # Reemplaza con el nombre de tu modelo en Hugging Face
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModelForSequenceClassification.from_pretrained(model_name)
 
-# Define the path to your model directory
-model_path = "./model"
+# Inicializa la aplicación FastAPI
+app = FastAPI()
 
-# Load model and tokenizer
-tokenizer = BertTokenizer.from_pretrained(model_path)
-model = BertForSequenceClassification.from_pretrained(model_path)
+# Define la estructura de los datos de entrada
+class SentencesInput(BaseModel):
+    sentences: list[str]
 
-# Set model to evaluation mode
-model.eval()
+# Crea un endpoint para hacer predicciones
+@app.post("/predict")
+async def predict(input: SentencesInput):
+    # Lista para almacenar los resultados de cada oración que cumplen los criterios
+    results = []
 
-@app.route('/predict', methods=['POST'])
-def predict():
-    data = request.get_json()  # Receive the JSON
-    sentences = data['sentences']  # Extract sentences
-
-    predictions = []
-    for sentence in sentences:
-        # Preprocess and tokenize the sentence
+    # Itera sobre cada oración
+    for sentence in input.sentences:
+        # Tokeniza la oración
         inputs = tokenizer(sentence, return_tensors="pt", truncation=True, padding=True)
+        
+        # Realiza la predicción
         with torch.no_grad():
             outputs = model(**inputs)
+            logits = outputs.logits
+            probabilities = torch.softmax(logits, dim=-1).tolist()[0]
+
+        # Determina la etiqueta de mayor probabilidad
+        max_prob = max(probabilities)
+        label = probabilities.index(max_prob)
         
-        # Get the predicted probabilities using softmax
-        logits = outputs.logits
-        probabilities = F.softmax(logits, dim=1)  # Convert logits to probabilities
-        
-        # Find the maximum probability and corresponding label
-        max_prob, predicted_class = torch.max(probabilities, dim=1)
-        max_prob = max_prob.item()  # Convert tensor to a float value
-        predicted_class = predicted_class.item()  # Convert tensor to int
-        
-        # Check if the max probability is greater than 70%
-        if max_prob > 0.6 and predicted_class != 10:
-            # Return the predicted label and probability
-            predictions.append({
-                "sentence": sentence,
-                "label": predicted_class,
-                "probability": round(max_prob * 100 * 0.65, 2)  # Return as a percentage
+        # Ajusta la probabilidad multiplicándola por 0.65
+
+        # Agrega el resultado solo si cumple con los criterios
+        if label != 10 and max_prob > 0.7:
+            adjusted_probability = max_prob * 0.65
+            results.append({
+                "label": label,
+                "probability": round(adjusted_probability * 100, 2),  # Formato en porcentaje
+                "sentence": sentence
             })
 
-    return jsonify(predictions)
+    # Devuelve directamente la lista de resultados
+    return results
+
+# Ejecuta el servidor
+# uvicorn main:app --reload  # Para ejecutar el servidor desde la línea de comandos
